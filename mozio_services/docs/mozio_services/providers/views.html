@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>views.py</title>
+  <link rel="stylesheet" href="../../pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>views.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      <p>The Mozio Service Providers API allows you to perform basic create, update, delete and fetch operations.
+   Most of the endpoints are in a predictable REST API format which allows for easy integration.
+   The database in use currently is MongoDB.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render</span><span class="p">,</span> <span class="n">render_to_response</span>
+<span class="kn">from</span> <span class="nn">django.views.decorators.csrf</span> <span class="kn">import</span> <span class="n">csrf_exempt</span>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">HttpResponse</span>
+<span class="kn">from</span> <span class="nn">bson.objectid</span> <span class="kn">import</span> <span class="n">ObjectId</span>
+<span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span> <span class="nn">bson.json_util</span> <span class="kn">import</span> <span class="n">dumps</span>
+<span class="kn">import</span> <span class="nn">pymongo</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="n">DB_CONN</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">MONGO_HOST</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">MONGO_PORT</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <p>This method allows us to create a service provider object or fetch all providers data based</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="nd">@csrf_exempt</span>
+<span class="k">def</span> <span class="nf">create_or_get_providers</span><span class="p">(</span><span class="n">request</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <pre><code>on whether the request is a POST or a GET.
+
+Structure:    api/v1/providers/
+
+POST:
+Allows us to Create a Service Provider object. It requires the following parameters
+name: Name of the Service Provider(COMPULSARY)
+email: The email address of the service provider(COMPULSARY)
+phone_number: The phone number of the service provider(COMPULSARY)
+language: The preferred language for the service provider(COMPULSARY)
+currency: The preferred currency for the service provider(COMPULSARY)
+
+The _id of the newly created Service Provider object is returned as a JSON response 
+on successful creation of the Service Provider object.
+
+All parameters marked COMPULSARY have to be provided as request parameters for a
+desired response.
+
+GET:
+Fetches all service provider objects and returns a list of service provider objects 
+as a JSON response. No additional input parameters are required
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">try</span><span class="p">:</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">DB_CONN</span><span class="p">[</span><span class="n">settings</span><span class="o">.</span><span class="n">MONGO_DB_NAME</span><span class="p">]</span>
+        <span class="n">providers</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">DB_CONN</span><span class="o">.</span><span class="n">server_info</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">ServerSelectionTimeoutError</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-3'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-3'>#</a>
+      </div>
+      <h5>In case of DB failure</h5>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+            <span class="n">name</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">phone_number</span><span class="p">,</span> <span class="n">language</span><span class="p">,</span> <span class="n">currency</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="p">)</span> <span class="o">*</span> <span class="mi">5</span>
+            <span class="n">provider_id</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,)</span>
+                <span class="n">email</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;email&quot;</span><span class="p">)</span>
+                <span class="n">phone_number</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phone_number&quot;</span><span class="p">)</span>
+                <span class="n">language</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;language&quot;</span><span class="p">)</span>
+                <span class="n">currency</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;currency&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-4'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-4'>#</a>
+      </div>
+      <h6>Missing request parameters</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">None</span> <span class="ow">in</span> <span class="p">[</span><span class="n">name</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">phone_number</span><span class="p">,</span> <span class="n">language</span><span class="p">,</span> <span class="n">currency</span><span class="p">]:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-5'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-5'>#</a>
+      </div>
+      <h6>In case of empty request paramaters</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-6'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-6'>#</a>
+      </div>
+      <h6>###  Email is set as unique index in DB (mongoDB)</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">try</span><span class="p">:</span>
+                <span class="n">provider_id</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">insert_one</span><span class="p">({</span>
+                    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                    <span class="s2">&quot;email&quot;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+                    <span class="s2">&quot;phone_number&quot;</span><span class="p">:</span> <span class="n">phone_number</span><span class="p">,</span>
+                    <span class="s2">&quot;language&quot;</span><span class="p">:</span> <span class="n">language</span><span class="p">,</span>
+                    <span class="s2">&quot;currency&quot;</span><span class="p">:</span> <span class="n">currency</span><span class="p">,</span>
+                    <span class="p">})</span><span class="o">.</span><span class="n">inserted_id</span>
+            <span class="k">except</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-7'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-7'>#</a>
+      </div>
+      <h6>### Insert exception</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="n">provider_id</span><span class="p">}),</span> 
+                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
+            <span class="n">providers_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">providers_list</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">find</span><span class="p">({})</span>
+            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">(</span><span class="n">providers_list</span><span class="p">),</span> 
+                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-8'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-8'>#</a>
+      </div>
+      <h6>## Unhandled Exceptions</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+            <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">503</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-9'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-9'>#</a>
+      </div>
+      <p>This method allows us to fetch a single Service Provider object.
+It also allows us to update and delete single Service Provider objects.</p>
+<p>GET:
+                        /api/v1/providers/{provider-object-id}/update/</p>
+<p>Example Structure:      /api/v1/providers/56d9ebb93dff263889ad103a/</p>
+<p>Allows us to fetch a single Service Provider object if it exists
+based on the id specified in the URL itself. No other additional
+request parameters are required.</p>
+<p>POST:</p>
+<p>Operation 1</p>
+<pre><code>                    /api/v1/providers/{provider-object-id}/update/
+</code></pre>
+<p>Example Structure:      /api/v1/providers/56d9ebb93dff263889ad103a/update/</p>
+<p>Allows us to update a Service Provider Object with the id specified in the URL
+itslef(if it exists). The presence of "update" at the end of the URL directs
+the API to perform an update operation.</p>
+<p>It requires the following parameters
+name: Name of the Service Provider(COMPULSARY)
+email: The email address of the service provider(COMPULSARY)
+phone_number: The phone number of the service provider(COMPULSARY)
+language: The preferred language for the service provider(COMPULSARY)
+currency: The preferred currency for the service provider(COMPULSARY)</p>
+<p>The _id of the updated Service Provider object is returned as a JSON response 
+on successful updation of the Service Provider object.</p>
+<p>All parameters marked COMPULSARY have to be provided as request parameters for a
+desired response.</p>
+<p>Operation 2</p>
+<pre><code>                    /api/v1/providers/{provider-object-id}/delete/
+</code></pre>
+<p>Example Structure:      /api/v1/providers/56d9ebb93dff263889ad103a/delete/</p>
+<p>Allows us to delete a Service Provider Object with the id specified in the URL
+itslef(if it exists). The presence of "delete" at the end of the URL directs
+the API to perform an delete operation. No other addtional request parameters
+are required for this operation.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="nd">@csrf_exempt</span>
+<span class="k">def</span> <span class="nf">manage_provider</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">provider_id</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-10'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-10'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    <span class="k">try</span><span class="p">:</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">DB_CONN</span><span class="p">[</span><span class="n">settings</span><span class="o">.</span><span class="n">MONGO_DB_NAME</span><span class="p">]</span>
+        <span class="n">providers</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">DB_CONN</span><span class="o">.</span><span class="n">server_info</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">ServerSelectionTimeoutError</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-11'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-11'>#</a>
+      </div>
+      <h6>#### In case of DB Failure</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;GET&quot;</span><span class="p">:</span>
+            
+            <span class="k">if</span> <span class="n">provider_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="n">provider</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">try</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-12'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-12'>#</a>
+      </div>
+      <h6>### Fetches a singe Service Provider object ##########3</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                    <span class="n">provider</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">find</span><span class="p">({</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="n">provider_id</span><span class="p">)})</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">provider</span><span class="o">.</span><span class="n">count</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                            <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">(</span><span class="n">provider</span><span class="p">),</span> 
+                        <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                        <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;POST&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">provider_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">action</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;update&quot;</span><span class="p">,</span> <span class="s2">&quot;delete&quot;</span><span class="p">]:</span>
+                    <span class="k">if</span> <span class="n">action</span> <span class="o">==</span> <span class="s2">&quot;update&quot;</span><span class="p">:</span>
+                        <span class="n">name</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">phone_number</span><span class="p">,</span> <span class="n">language</span><span class="p">,</span> <span class="n">currency</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="p">)</span> <span class="o">*</span> <span class="mi">5</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">name</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">,)</span>
+                            <span class="n">email</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;email&quot;</span><span class="p">)</span>
+                            <span class="n">phone_number</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;phone_number&quot;</span><span class="p">)</span>
+                            <span class="n">language</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;language&quot;</span><span class="p">)</span>
+                            <span class="n">currency</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;currency&quot;</span><span class="p">)</span>
+                        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="bp">None</span> <span class="ow">in</span> <span class="p">[</span><span class="n">name</span><span class="p">,</span> <span class="n">email</span><span class="p">,</span> <span class="n">phone_number</span><span class="p">,</span> <span class="n">language</span><span class="p">,</span> <span class="n">currency</span><span class="p">]:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-13'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-13'>#</a>
+      </div>
+      <h6>In case of empty request paramaters</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>                            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">updated_id</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">update_one</span><span class="p">({</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="n">provider_id</span><span class="p">)},</span> <span class="p">{</span> <span class="s1">&#39;$set&#39;</span><span class="p">:</span> <span class="p">{</span>
+                                <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                                <span class="s2">&quot;email&quot;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+                                <span class="s2">&quot;phone_number&quot;</span><span class="p">:</span> <span class="n">phone_number</span><span class="p">,</span>
+                                <span class="s2">&quot;language&quot;</span><span class="p">:</span> <span class="n">language</span><span class="p">,</span>
+                                <span class="s2">&quot;currency&quot;</span><span class="p">:</span> <span class="n">currency</span><span class="p">,</span>
+                                <span class="p">}},</span> <span class="n">upsert</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+                        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">provider_id</span><span class="p">}),</span> 
+                            <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">action</span> <span class="o">==</span> <span class="s2">&quot;delete&quot;</span><span class="p">:</span>
+                        <span class="n">provider</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                        <span class="k">try</span><span class="p">:</span>
+                            <span class="n">provider</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">delete_one</span><span class="p">({</span><span class="s2">&quot;_id&quot;</span><span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="n">provider_id</span><span class="p">)})</span>
+                            <span class="k">if</span> <span class="n">provider</span><span class="o">.</span><span class="n">deleted_count</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                                <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                                    <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+                            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;deleted&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">}),</span> 
+                                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+                        <span class="k">except</span><span class="p">:</span>
+                            <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+                                <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">404</span><span class="p">)</span>
+            
+        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({</span><span class="s2">&quot;total&quot;</span><span class="p">:</span><span class="mi">1</span><span class="p">}),</span>
+            <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-14'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-14'>#</a>
+      </div>
+      <h6>## Unhandled Exceptions</h6>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>        <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">(</span><span class="n">dumps</span><span class="p">({}),</span> 
+            <span class="n">content_type</span><span class="o">=</span><span class="s2">&quot;application/json&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">503</span><span class="p">)</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

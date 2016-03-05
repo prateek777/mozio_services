@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>models.py</title>
+  <link rel="stylesheet" href="../../pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>models.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">unicode_literals</span>
+
+<span class="kn">from</span> <span class="nn">django.db</span> <span class="kn">import</span> <span class="n">models</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <p>Create your models here.</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <h6></h6>
+<p>Current DB structure in mongoDB for Polygons:</p>
+<pre><code>name: Name of the Service Area(COMPULSARY)
+price: The price of the service area specified by the service provider(COMPULSARY)
+provider_id: The id of the service provider which identifies the provider in the providers 
+             collection(COMPULSARY)
+provider_name: The name of the service provider in the providers collection(COMPULSARY)
+polygon_data: A JSON array consisting of coordinates(array of latitude and longitude) for 
+              specifying the boundaries of a polygon. This follows the GEOJSON format(COMPULSARY)
+              Example: [ [ -73.92165, 40.663843 ], [ -73.9221, 40.664251 ], [ -73.92275, 40.667098 ], 
+                         [ -73.92165, 40.663843 ] ]
+
+Example: { "_id" : ObjectId("56d9fa2f3dff263b44a36073"), 
+"provider_id" : ObjectId("56d9cd80ca79d385ded6966e"), 
+"name" : "Block Group 6 360470900006", "price" : 10, 
+"geojson_geometry" : { "type" : "Polygon", "coordinates" : [ [ [ -73.92165, 40.663843 ], [ -73.9221, 40.664251 ], 
+[ -73.92275, 40.667098 ], [ -73.92187, 40.667481 ], [ -73.92097, 40.663953 ], [ -73.92165, 40.663843 ] ] 
+] }, 
+"provider_name" : "ABC Services" }
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>

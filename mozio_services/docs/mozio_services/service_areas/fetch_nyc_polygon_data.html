@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>fetch_nyc_polygon_data.py</title>
+  <link rel="stylesheet" href="../../pycco.css">
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <div class='section'>
+    <div class='docs'><h1>fetch_nyc_polygon_data.py</h1></div>
+  </div>
+  <div class='clearall'>
+  <div class='section' id='section-0'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-0'>#</a>
+      </div>
+      
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">requests</span>
+<span class="kn">import</span> <span class="nn">pymongo</span>
+
+<span class="n">DB_CONN</span> <span class="o">=</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">MongoClient</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">27017</span><span class="p">)</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-1'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-1'>#</a>
+      </div>
+      <p>Used for fetching 2010 Census Block Groups Polygons</p>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre><span class="k">def</span> <span class="nf">dump_nyc_data</span><span class="p">():</span></pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+  <div class='section' id='section-2'>
+    <div class='docs'>
+      <div class='octowrap'>
+        <a class='octothorpe' href='#section-2'>#</a>
+      </div>
+      <pre><code>GEOJSON data from http://data.beta.nyc/dataset/2010-census-block-groups-polygons
+so as to use a sample dataset of polygonsfor testing purposes.
+
+It Fetches the polygon data and dumps service_area objects in the DB.
+</code></pre>
+    </div>
+    <div class='code'>
+      <div class="highlight"><pre>    
+    <span class="n">db</span> <span class="o">=</span> <span class="n">DB_CONN</span><span class="p">[</span><span class="s2">&quot;mozio_testing&quot;</span><span class="p">]</span>
+    <span class="n">polygons</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s2">&quot;polygons&quot;</span><span class="p">]</span>
+    <span class="n">providers</span> <span class="o">=</span> <span class="n">db</span><span class="p">[</span><span class="s2">&quot;providers&quot;</span><span class="p">]</span>
+    <span class="n">provider_data</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">info</span> <span class="o">=</span> <span class="n">DB_CONN</span><span class="o">.</span><span class="n">server_info</span><span class="p">()</span>
+    <span class="k">except</span> <span class="n">pymongo</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">ServerSelectionTimeoutError</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="n">url</span> <span class="o">=</span> <span class="s2">&quot;http://data.beta.nyc//dataset/75ac8522-fec3-47df-8c2f-b45aef1647e9/resource/d2cf6fe5-1914-474e-8648-085ca7067bde/download/da3652503b244838a41c4c2d2de7ecfe2010censusblockgroupspolygonssimple.geojson&quot;</span>
+    
+    <span class="n">polygon_data</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+    <span class="n">providers_list</span> <span class="o">=</span> <span class="n">providers</span><span class="o">.</span><span class="n">find</span><span class="p">({})</span>
+
+    <span class="k">for</span> <span class="n">provider</span> <span class="ow">in</span> <span class="n">providers_list</span><span class="p">:</span>
+        <span class="n">p_data</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">p_data</span><span class="p">[</span><span class="s2">&quot;provider_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">provider</span><span class="p">[</span><span class="s2">&quot;_id&quot;</span><span class="p">]</span>
+        <span class="n">p_data</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">provider</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+        <span class="n">provider_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">p_data</span><span class="p">)</span>
+
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">polygon_data</span><span class="p">[</span><span class="s2">&quot;features&quot;</span><span class="p">]:</span>
+
+        <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">service_area</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">service_area</span><span class="p">[</span><span class="s2">&quot;geojson_geometry&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span>
+        <span class="n">service_area</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;properties&quot;</span><span class="p">][</span><span class="s2">&quot;NAMELSAD&quot;</span><span class="p">],</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;properties&quot;</span><span class="p">][</span><span class="s2">&quot;GEOID&quot;</span><span class="p">])</span>
+        <span class="n">service_area</span><span class="p">[</span><span class="s2">&quot;price&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="n">service_area</span><span class="p">[</span><span class="s2">&quot;provider_id&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">provider_data</span><span class="p">[</span><span class="n">count</span><span class="p">][</span><span class="s2">&quot;provider_id&quot;</span><span class="p">]</span>
+        <span class="n">service_area</span><span class="p">[</span><span class="s2">&quot;provider_name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">provider_data</span><span class="p">[</span><span class="n">count</span><span class="p">][</span><span class="s2">&quot;name&quot;</span><span class="p">]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">polygon_id</span> <span class="o">=</span> <span class="n">polygons</span><span class="o">.</span><span class="n">insert_one</span><span class="p">(</span><span class="n">service_area</span><span class="p">)</span><span class="o">.</span><span class="n">inserted_id</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="n">count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">dump_nyc_data</span><span class="p">()</span>
+
+</pre></div>
+    </div>
+  </div>
+  <div class='clearall'></div>
+</div>
+</body>
