@@ -1,10 +1,11 @@
 # mozio_services
-Mozio Polygon Services
+Mozio Service Provider Service
 
-""" The Mozio Service Areas API allows you to perform basic create, update, delete and fetch operations.
+""" The Mozio Service Providers API allows you to perform basic create, update, delete and fetch operations.
     Most of the endpoints are in a predictable REST API format which allows for easy integration.
     The database in use currently is MongoDB.
-"""   
+"""    
+
 
 create_or_get_providers()
     """ This method allows us to create a service provider object or fetch all providers data based
@@ -82,7 +83,15 @@ manage_provider()
     are required for this operation.
     """
     
-    
+Mozio Polygon Service
+
+""" The Mozio Service Areas API allows you to perform basic create, update, delete and fetch operations.
+    It also allows you to find out exisiting service providers and prices on a particular coordinate.
+    Most of the endpoints are in a predictable REST API format which allows for easy integration.
+    The database in use currently is MongoDB.
+"""   
+
+
 create_or_get_polygons()
 """ This method allows us to create a service area object or fetch all service area data based
     on whether the request is a POST or a GET.
