@@ -1,0 +1,6 @@
+Django==1.9.3
+django-cors-headers
+djangorestframework
+requests
+pymongo
+geojson
